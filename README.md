@@ -18,8 +18,8 @@ Measure impact on training throughput (samples/sec) and step time.
 - MLflow for experiment tracking
 
 ## Status
-- [Completed] Phase 1: Cluster setup and operator install
-- [In progress] Phase 2: Baseline single-node PyTorchJob with MLflow tracking
+- [x] Phase 1: Cluster setup and operator install
+- [ ] Phase 2: Baseline single-node PyTorchJob with MLflow tracking
 - [ ] Phase 3: Multi-node training, baseline throughput measurement
 - [ ] Phase 4: CNI and kernel benchmarking loop
 - [ ] Phase 5: Analysis and findings
