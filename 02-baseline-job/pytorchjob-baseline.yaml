@@ -1,0 +1,30 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: baseline-single-node
+  namespace: default
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+          - name: pytorch
+            image: 192.168.56.1:5000/train:v1
+            imagePullPolicy: Always
+            env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow.mlflow.svc.cluster.local:5000"
+            - name: CNI_PLUGIN
+              value: "flannel"
+            - name: GIT_PYTHON_REFRESH
+              value: "quiet"
+            resources:
+              requests:
+                cpu: "1"
+                memory: "512Mi"
+              limits:
+                cpu: "2"
+                memory: "1Gi"
