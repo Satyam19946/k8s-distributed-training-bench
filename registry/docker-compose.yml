@@ -1,0 +1,9 @@
+services:
+  registry:
+    image: registry:2
+    container_name: registry
+    restart: always
+    ports:
+      - "192.168.56.1:5000:5000"
+    volumes:
+      - /opt/registry:/var/lib/registry
