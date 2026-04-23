@@ -20,7 +20,7 @@ Measure impact on training throughput (samples/sec) and step time.
 ## Status
 - [x] Phase 1: Cluster setup and operator install
 - [x] Phase 2: Baseline single-node PyTorchJob with MLflow tracking
-- [ ] Phase 3: Multi-node training, baseline throughput measurement
+- [x] Phase 3: Multi-node training, baseline throughput measurement
 - [ ] Phase 4: CNI and kernel benchmarking loop
 - [ ] Phase 5: Analysis and findings
 
@@ -68,3 +68,46 @@ Phase 2 compute time is 1.9ms, AllReduce will dominate step time in Phase 3 — 
 | backend | gloo |
 | batch_size | 64 |
 | num_steps | 100 |
+
+## Phase 3
+
+### What Changed
+
+Phase 3 runs the same model, same batch size, and same number of steps as
+Phase 2 — but now with `world_size=2` across two worker nodes. The Training
+Operator schedules a Master pod on worker1 and a Worker pod on worker2. Every
+backward pass now triggers a real Gloo AllReduce over the Flannel VXLAN
+overlay between the two nodes. The image was rebuilt and tagged as `train:v2`
+so the Phase 2 image (`train:v1`) remains intact in the registry.
+
+### Break-Even Threshold
+
+The break-even is defined as 2× the Phase 2 avg\_step\_time: **3.80ms**.
+Results above this mean AllReduce communication overhead exceeds compute time
+— adding workers makes throughput worse, not better.
+
+### Results (world\_size=2, Flannel CNI)
+
+| Metric | Phase 2 (world\_size=1) | Phase 3 (world\_size=2) | Delta |
+| --- | --- | --- | --- |
+| avg\_step\_time\_ms | 1.90 | 4.51 | +137% |
+| avg\_samples\_per\_sec | 33,724 | 28,405 | -16% |
+| break-even threshold | — | 3.80ms | ABOVE |
+
+### Per-Step Observations
+
+| Steps | avg step\_time | Notes |
+| --- | --- | --- |
+| 0 | 23.24ms | Gloo rendezvous + first AllReduce init — one-time cost |
+| 10–40 | ~3.7ms | Steady-state, near break-even |
+| 50–90 | 3.97–5.51ms | Flannel VXLAN jitter, libvirt scheduling noise |
+
+### Interpretation
+
+At this model size and batch size, AllReduce overhead dominates compute time.
+Adding a second worker caused a 16% throughput regression — the cost of
+synchronizing ~534KB of gradients over a VXLAN overlay exceeds the compute
+time saved by splitting the batch. The per-step variance (3.7ms–5.51ms) is
+characteristic of overlay encapsulation jitter and is the primary target for
+the CNI comparison in Phase 4.
+

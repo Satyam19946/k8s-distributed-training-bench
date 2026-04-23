@@ -1,0 +1,43 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: phase3-multi-node
+  namespace: default
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: 192.168.56.1:5000/train:v2
+              command: ["python", "train.py"]
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: "http://192.168.56.11:30500"
+                - name: CNI_PLUGIN
+                  value: "flannel"
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: "512Mi"
+    Worker:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: 192.168.56.1:5000/train:v2
+              command: ["python", "train.py"]
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: "http://192.168.56.11:30500"
+                - name: CNI_PLUGIN
+                  value: "flannel"
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: "512Mi"
